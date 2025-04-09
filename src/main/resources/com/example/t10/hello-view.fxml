@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.cell.*?>
+
+<VBox xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.example.t10.HelloController">
+    <ToolBar>
+        <Label text="Data Source:" />
+        <ComboBox fx:id="dataSourceComboBox">
+            <tooltip>
+                <Tooltip text="Выберите источник данных: H2 Database или CSV File" />
+            </tooltip>
+        </ComboBox>
+        <Button text="Load from File" fx:id="loadFromFileButton">
+            <tooltip>
+                <Tooltip text="Загрузить данные из CSV файла" />
+            </tooltip>
+        </Button>
+    </ToolBar>
+    <TableView fx:id="productTable">
+        <columns>
+            <TableColumn text="ID" prefWidth="50" fx:id="idColumn">
+            </TableColumn>
+            <TableColumn text="Name" prefWidth="150" fx:id="nameColumn">
+
+            </TableColumn>
+            <TableColumn text="Quantity" prefWidth="100" fx:id="quantityColumn">
+            </TableColumn>
+            <TableColumn text="Tag" prefWidth="100" fx:id="tagColumn">
+
+            </TableColumn>
+        </columns>
+    </TableView>
+    <HBox spacing="10">
+        <Button text="Add" onAction="#handleAddProduct">
+            <tooltip>
+                <Tooltip text="Добавить новый продукт" />
+            </tooltip>
+        </Button>
+        <Button text="Update" onAction="#handleUpdateProduct">
+            <tooltip>
+                <Tooltip text="Обновить выбранный продукт" />
+            </tooltip>
+        </Button>
+        <Button text="Delete" onAction="#handleDeleteProduct">
+            <tooltip>
+                <Tooltip text="Удалить выбранный продукт" />
+            </tooltip>
+        </Button>
+    </HBox>
+</VBox>
