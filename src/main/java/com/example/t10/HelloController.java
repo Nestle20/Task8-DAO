@@ -3,218 +3,196 @@ package com.example.t10;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
-import javafx.scene.control.TableView;
-import javafx.scene.control.TableColumn;
+import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
-import javafx.scene.control.TextField;
-import javafx.scene.control.ButtonType;
-import javafx.scene.control.ButtonBar.ButtonData;
-import javafx.scene.control.Dialog;
-import javafx.scene.control.Label;
-import javafx.scene.control.Alert;
-import javafx.scene.control.ComboBox;
-import javafx.scene.layout.GridPane;
-import javafx.util.Pair;
+import javafx.stage.FileChooser;
+
+import java.io.File;
 
 public class HelloController {
-    @FXML
-    private TableView<Product> productTable;
-    @FXML
-    private TableColumn<Product, Integer> idColumn;
-    @FXML
-    private TableColumn<Product, String> nameColumn;
-    @FXML
-    private TableColumn<Product, Integer> quantityColumn;
-    @FXML
-    private TableColumn<Product, Tag> tagColumn;
+    private final String tipsfordelet = "Загрузка файлов";
+    @FXML private TableView<Product> productTable;
+    @FXML private TableColumn<Product, Integer> idColumn;
+    @FXML private TableColumn<Product, String> nameColumn;
+    @FXML private TableColumn<Product, Integer> quantityColumn;
+    @FXML private TableColumn<Product, Tag> tagColumn;
+    @FXML private ComboBox<String> dataSourceComboBox;
+    @FXML private Button loadFromFileButton;
+    @FXML private TextField nameField;
+    @FXML private TextField quantityField;
+    @FXML private ComboBox<Tag> tagComboBox;
 
-    private final ProductDAO productDAO;
-    private final TagDAO tagDAO;
-    private final ObservableList<Product> products;
-    private final ObservableList<Tag> tags;
 
-    public HelloController() {
-        this.tagDAO = new TagListImpl(); // Инициализируем TagDAO
-        this.productDAO = new ProductDAOImpl(tagDAO); // Передаем TagDAO в ProductDAO
-        this.products = FXCollections.observableArrayList();
-        this.tags = FXCollections.observableArrayList(tagDAO.getAllTags()); // Загружаем теги
-    }
+    private ProductDAO productDAO;
+    private final TagDAO tagDAO = new TagListImpl();
+    private final ObservableList<Product> products = FXCollections.observableArrayList();
+    private final ObservableList<Tag> tags = FXCollections.observableArrayList(tagDAO.getAllTags());
 
     @FXML
     public void initialize() {
-        // Инициализация колонок таблицы
+        Tooltip tooltip = new Tooltip(tipsfordelet);
+        loadFromFileButton.setTooltip(tooltip);
+        try {
+            setupTableColumns();
+            setupDataSourceComboBox();
+            setupTagComboBox();
+            productDAO = new ProductDBConnectDAO(tagDAO);
+            refreshData();
+        } catch (Exception e) {
+            showAlert("Initialization Error", "Failed to initialize", e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    private void setupTableColumns() {
         idColumn.setCellValueFactory(new PropertyValueFactory<>("id"));
         nameColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
         quantityColumn.setCellValueFactory(new PropertyValueFactory<>("quantity"));
         tagColumn.setCellValueFactory(new PropertyValueFactory<>("tag"));
+    }
 
-        // Загружаем данные из ProductDAO
-        products.addAll(productDAO.getAllProducts());
-        productTable.setItems(products);
+    private void setupDataSourceComboBox() {
+        dataSourceComboBox.getItems().addAll("H2 Database", "CSV File");
+        dataSourceComboBox.getSelectionModel().select(0);
+        dataSourceComboBox.setOnAction(e -> switchDataSource());
+    }
+
+    private void setupTagComboBox() {
+        tagComboBox.setItems(tags);
+        tagComboBox.getSelectionModel().selectFirst();
+    }
+
+    private void switchDataSource() {
+        String selected = dataSourceComboBox.getSelectionModel().getSelectedItem();
+        try {
+            if ("H2 Database".equals(selected)) {
+                productDAO = new ProductDBConnectDAO(tagDAO);
+            } else {
+                productDAO = new ProductCSVDAO(tagDAO);
+            }
+            refreshData();
+        } catch (Exception e) {
+            showAlert("Error", "Failed to switch data source", e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    @FXML
+    private void handleLoadFromFile() {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Open CSV File");
+        fileChooser.getExtensionFilters().add(
+                new FileChooser.ExtensionFilter("CSV Files", "*.csv"));
+
+        File file = fileChooser.showOpenDialog(loadFromFileButton.getScene().getWindow());
+        if (file != null) {
+            try {
+                productDAO = new ProductCSVDAO(tagDAO);
+                ((ProductCSVDAO) productDAO).importFromCSV(file.getAbsolutePath());
+                dataSourceComboBox.getSelectionModel().select("CSV File");
+                refreshData();
+            } catch (Exception e) {
+                showAlert("Error", "Failed to load file", e.getMessage());
+                e.printStackTrace();
+            }
+        }
     }
 
     @FXML
     private void handleAddProduct() {
-        // Создаем диалоговое окно
-        Dialog<Pair<String, Pair<Integer, Tag>>> dialog = new Dialog<>();
-        dialog.setTitle("Добавить продукт");
-        dialog.setHeaderText("Введите данные о новом продукте");
+        try {
+            String name = nameField.getText();
+            int quantity = Integer.parseInt(quantityField.getText());
+            Tag selectedTag = tagComboBox.getSelectionModel().getSelectedItem();
 
-        // Устанавливаем кнопки (ОК и Отмена)
-        ButtonType addButtonType = new ButtonType("Добавить", ButtonData.OK_DONE);
-        dialog.getDialogPane().getButtonTypes().addAll(addButtonType, ButtonType.CANCEL);
-
-        // Создаем поля для ввода
-        GridPane grid = new GridPane();
-        grid.setHgap(10);
-        grid.setVgap(10);
-
-        TextField nameField = new TextField();
-        nameField.setPromptText("Название");
-        TextField quantityField = new TextField();
-        quantityField.setPromptText("Количество");
-        ComboBox<Tag> tagComboBox = new ComboBox<>(tags); // Выбор тега из списка
-
-        grid.add(new Label("Название:"), 0, 0);
-        grid.add(nameField, 1, 0);
-        grid.add(new Label("Количество:"), 0, 1);
-        grid.add(quantityField, 1, 1);
-        grid.add(new Label("Тег:"), 0, 2);
-        grid.add(tagComboBox, 1, 2);
-
-        dialog.getDialogPane().setContent(grid);
-
-        // Преобразуем результат в объект Pair
-        dialog.setResultConverter(dialogButton -> {
-            if (dialogButton == addButtonType) {
-                try {
-                    String name = nameField.getText();
-                    int quantity = Integer.parseInt(quantityField.getText());
-                    Tag tag = tagComboBox.getValue();
-                    return new Pair<>(name, new Pair<>(quantity, tag));
-                } catch (NumberFormatException e) {
-                    // Обработка ошибки ввода количества
-                    Alert alert = new Alert(Alert.AlertType.ERROR);
-                    alert.setTitle("Ошибка");
-                    alert.setHeaderText("Некорректный ввод");
-                    alert.setContentText("Количество должно быть числом.");
-                    alert.showAndWait();
-                    return null;
-                }
+            if (name.isEmpty() || selectedTag == null) {
+                showAlert("Error", "Validation Error", "Please fill all fields");
+                return;
             }
-            return null;
-        });
 
-        // Обрабатываем результат
-        dialog.showAndWait().ifPresent(result -> {
-            String name = result.getKey();
-            int quantity = result.getValue().getKey();
-            Tag tag = result.getValue().getValue();
-
-            // Создаем новый продукт
-            Product newProduct = new Product(0, name, quantity, tag); // ID будет установлен в ProductDAO
-            productDAO.addProduct(newProduct); // Добавляем продукт через DAO
-            products.add(newProduct); // Обновляем таблицу
-            productTable.refresh();
-        });
+            Product newProduct = new Product(0, name, quantity, selectedTag);
+            productDAO.addProduct(newProduct);
+            refreshData();
+            clearFields();
+        } catch (NumberFormatException e) {
+            showAlert("Error", "Invalid Quantity", "Please enter a valid number for quantity");
+        } catch (Exception e) {
+            showAlert("Error", "Failed to add product", e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     @FXML
     private void handleUpdateProduct() {
-        // Логика обновления продукта
         Product selectedProduct = productTable.getSelectionModel().getSelectedItem();
-        if (selectedProduct != null) {
-            // Создаем диалоговое окно для обновления продукта
-            Dialog<Pair<String, Pair<Integer, Tag>>> dialog = new Dialog<>();
-            dialog.setTitle("Обновить продукт");
-            dialog.setHeaderText("Редактирование продукта: " + selectedProduct.getName());
+        if (selectedProduct == null) {
+            showAlert("Error", "No Selection", "Please select a product to update");
+            return;
+        }
 
-            // Устанавливаем кнопки (ОК и Отмена)
-            ButtonType updateButtonType = new ButtonType("Обновить", ButtonData.OK_DONE);
-            dialog.getDialogPane().getButtonTypes().addAll(updateButtonType, ButtonType.CANCEL);
+        try {
+            String name = nameField.getText();
+            int quantity = Integer.parseInt(quantityField.getText());
+            Tag selectedTag = tagComboBox.getSelectionModel().getSelectedItem();
 
-            // Создаем поля для ввода
-            GridPane grid = new GridPane();
-            grid.setHgap(10);
-            grid.setVgap(10);
+            if (name.isEmpty() || selectedTag == null) {
+                showAlert("Error", "Validation Error", "Please fill all fields");
+                return;
+            }
 
-            TextField nameField = new TextField(selectedProduct.getName());
-            nameField.setPromptText("Название");
-            TextField quantityField = new TextField(String.valueOf(selectedProduct.getQuantity()));
-            quantityField.setPromptText("Количество");
-            ComboBox<Tag> tagComboBox = new ComboBox<>(tags); // Выбор тега из списка
-            tagComboBox.setValue(selectedProduct.getTag()); // Устанавливаем текущий тег
-
-            grid.add(new Label("Название:"), 0, 0);
-            grid.add(nameField, 1, 0);
-            grid.add(new Label("Количество:"), 0, 1);
-            grid.add(quantityField, 1, 1);
-            grid.add(new Label("Тег:"), 0, 2);
-            grid.add(tagComboBox, 1, 2);
-
-            dialog.getDialogPane().setContent(grid);
-
-            // Преобразуем результат в объект Pair
-            dialog.setResultConverter(dialogButton -> {
-                if (dialogButton == updateButtonType) {
-                    try {
-                        String name = nameField.getText();
-                        int quantity = Integer.parseInt(quantityField.getText());
-                        Tag tag = tagComboBox.getValue();
-                        return new Pair<>(name, new Pair<>(quantity, tag));
-                    } catch (NumberFormatException e) {
-                        // Обработка ошибки ввода количества
-                        Alert alert = new Alert(Alert.AlertType.ERROR);
-                        alert.setTitle("Ошибка");
-                        alert.setHeaderText("Некорректный ввод");
-                        alert.setContentText("Количество должно быть числом.");
-                        alert.showAndWait();
-                        return null;
-                    }
-                }
-                return null;
-            });
-
-            // Обрабатываем результат
-            dialog.showAndWait().ifPresent(result -> {
-                String name = result.getKey();
-                int quantity = result.getValue().getKey();
-                Tag tag = result.getValue().getValue();
-
-                // Обновляем выбранный продукт
-                selectedProduct.setName(name);
-                selectedProduct.setQuantity(quantity);
-                selectedProduct.setTag(tag);
-
-                // Обновляем продукт в DAO
-                productDAO.updateProduct(selectedProduct);
-
-                // Обновляем таблицу
-                productTable.refresh();
-            });
-        } else {
-            Alert alert = new Alert(Alert.AlertType.WARNING);
-            alert.setTitle("Ошибка");
-            alert.setHeaderText("Продукт не выбран");
-            alert.setContentText("Пожалуйста, выберите продукт для обновления.");
-            alert.showAndWait();
+            selectedProduct.setName(name);
+            selectedProduct.setQuantity(quantity);
+            selectedProduct.setTag(selectedTag);
+            productDAO.updateProduct(selectedProduct);
+            refreshData();
+            clearFields();
+        } catch (NumberFormatException e) {
+            showAlert("Error", "Invalid Quantity", "Please enter a valid number for quantity");
+        } catch (Exception e) {
+            showAlert("Error", "Failed to update product", e.getMessage());
+            e.printStackTrace();
         }
     }
 
     @FXML
     private void handleDeleteProduct() {
-        // Логика удаления продукта
         Product selectedProduct = productTable.getSelectionModel().getSelectedItem();
-        if (selectedProduct != null) {
-            productDAO.deleteProduct(selectedProduct.getId()); // Удаляем продукт через DAO
-            products.remove(selectedProduct); // Обновляем таблицу
-            productTable.refresh();
-        } else {
-            Alert alert = new Alert(Alert.AlertType.WARNING);
-            alert.setTitle("Ошибка");
-            alert.setHeaderText("Продукт не выбран");
-            alert.setContentText("Пожалуйста, выберите продукт для удаления.");
-            alert.showAndWait();
+        if (selectedProduct == null) {
+            showAlert("Error", "No Selection", "Please select a product to delete");
+            return;
         }
+
+        try {
+            productDAO.deleteProduct(selectedProduct.getId());
+            refreshData();
+            clearFields();
+        } catch (Exception e) {
+            showAlert("Error", "Failed to delete product", e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    private void refreshData() {
+        try {
+            products.setAll(productDAO.getAllProducts());
+            productTable.setItems(products);
+        } catch (Exception e) {
+            showAlert("Error", "Failed to load data", e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    private void clearFields() {
+        nameField.clear();
+        quantityField.clear();
+        tagComboBox.getSelectionModel().selectFirst();
+    }
+
+    private void showAlert(String title, String header, String content) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle(title);
+        alert.setHeaderText(header);
+        alert.setContentText(content);
+        alert.showAndWait();
     }
 }

@@ -5,19 +5,19 @@ import java.util.List;
 
 public class TagListImpl implements TagDAO {
     private final List<Tag> tags;
-    private int nextId = 1; // Счетчик для генерации ID
 
     public TagListImpl() {
         tags = new ArrayList<>();
-        // Добавляем начальные теги
-        tags.add(new Tag(nextId++, "Electronics"));
-        tags.add(new Tag(nextId++, "Clothing"));
-        tags.add(new Tag(nextId++, "Home"));
-        tags.add(new Tag(nextId++, "Sports"));
-        tags.add(new Tag(nextId++, "Books"));
+        tags.add(new Tag(1, "Electronics"));
+        tags.add(new Tag(2, "Clothing"));
+        tags.add(new Tag(3, "Home"));
+
+        // Добавляем тег по умолчанию на случай ошибок
+        tags.add(new Tag(0, "Unknown"));
     }
+
     @Override
     public List<Tag> getAllTags() {
-        return new ArrayList<>(tags); // Возвращаем копию списка
+        return new ArrayList<>(tags);
     }
 }

@@ -6,21 +6,25 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 
+import java.util.Objects;
+
 public class HelloApplication extends Application {
-
     @Override
-    public void start(Stage primaryStage) throws Exception {
-        // Загружаем FXML-файл
-        Parent root = FXMLLoader.load(getClass().getResource("/com/example/t10/hello-view.fxml"));
-
-        // Устанавливаем заголовок окна
-        primaryStage.setTitle("Управление продуктами");
-
-        // Создаем сцену и устанавливаем ее в окно
-        primaryStage.setScene(new Scene(root, 600, 400));
-
-        // Показываем окно
-        primaryStage.show();
+    public void start(Stage stage) throws Exception {
+        Parent root = FXMLLoader.load(Objects.requireNonNull(getClass().getResource("hello-view.fxml")));
+        stage.setTitle("Product Management System");
+        stage.setScene(new Scene(root, 800, 600));
+        stage.setOnCloseRequest(e -> {
+            try {
+                DBConnect dbConnect = new DBConnect();
+                if (dbConnect.getConnection() != null) {
+                    dbConnect.disconnect();
+                }
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+        });
+        stage.show();
     }
 
     public static void main(String[] args) {
