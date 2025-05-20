@@ -50,4 +50,34 @@ public class ProductDAOImpl implements ProductDAO {
     public List<Product> getAllProducts() {
         return new ArrayList<>(products); // Возвращаем копию списка
     }
+
+    @Override
+    public void importFromCSV(String filePath) {
+
+    }
+
+    @Override
+    public void exportToCSV(String filePath) {
+
+    }
+
+    @Override
+    public void switchToDatabaseSource() {
+
+    }
+
+    @Override
+    public void switchToFileSource() {
+
+    }
+
+    @Override
+    public void switchToInMemorySource() {
+
+    }
+
+    @Override
+    public String getCurrentFilePath() {
+        return "";
+    }
 }
