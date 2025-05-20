@@ -7,7 +7,7 @@ import java.sql.SQLException;
 public class H2Demo {
     public static void main(String[] args) {
         // URL для подключения к файловой БД (хранится в домашней папке)
-        String url = "jdbc:h2:tcp://localhost/~/test"; // Будет создан файл ~/myh2db.mv.db
+        String url = "jdbc:h2:~/test"; // Будет создан файл ~/myh2db.mv.db
         String user = "sa"; // Имя пользователя
         String password = "";
 

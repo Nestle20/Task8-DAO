@@ -1,6 +1,10 @@
 package com.example.t10;
 
-public class Tag {
+import java.io.Serializable;
+
+public class Tag implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     private int id;
     private String name;
 
@@ -9,7 +13,6 @@ public class Tag {
         this.name = name;
     }
 
-    // Getters
     public int getId() { return id; }
     public String getName() { return name; }
 

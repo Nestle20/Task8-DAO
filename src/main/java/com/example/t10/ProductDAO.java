@@ -11,4 +11,6 @@ public interface ProductDAO {
     void exportToCSV(String filePath);
     void switchToDatabaseSource();
     void switchToFileSource();
+    void switchToInMemorySource();
+    String getCurrentFilePath();
 }

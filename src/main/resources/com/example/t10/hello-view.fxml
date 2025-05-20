@@ -2,49 +2,68 @@
 
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
-<?import javafx.scene.control.cell.*?>
 
-<VBox xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1"
-      fx:controller="com.example.t10.HelloController">
+<VBox spacing="10" xmlns="http://javafx.com/javafx/17.0.12" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.example.t10.HelloController">
     <ToolBar>
-        <Label text="Data Source:" />
-        <ComboBox fx:id="dataSourceComboBox">
+        <Label text="Источник данных:" />
+        <ComboBox fx:id="dataSourceComboBox" prefWidth="150">
             <tooltip>
-                <Tooltip text="Выберите источник данных: H2 Database или CSV File" />
+                <Tooltip text="Выберите источник данных: H2, CSV или In-Memory" />
             </tooltip>
         </ComboBox>
-        <Button text="Load from File" fx:id="loadFromFileButton">
+        <Button fx:id="loadFromFileButton" onAction="#handleLoadFromFile" text="Загрузить из файла">
             <tooltip>
                 <Tooltip text="Загрузить данные из CSV файла" />
             </tooltip>
         </Button>
+        <Button fx:id="saveButton" disable="true" onAction="#handleSaveToFile" text="Сохранить в файл">
+            <tooltip>
+                <Tooltip text="Сохранить изменения в файл" />
+            </tooltip>
+        </Button>
     </ToolBar>
-    <TableView fx:id="productTable">
+
+    <TableView fx:id="productTable" prefHeight="300" prefWidth="514.0">
         <columns>
-            <TableColumn text="ID" prefWidth="50" fx:id="idColumn">
-            </TableColumn>
-            <TableColumn text="Name" prefWidth="150" fx:id="nameColumn">
-
-            </TableColumn>
-            <TableColumn text="Quantity" prefWidth="100" fx:id="quantityColumn">
-            </TableColumn>
-            <TableColumn text="Tag" prefWidth="100" fx:id="tagColumn">
-
-            </TableColumn>
+            <TableColumn fx:id="idColumn" prefWidth="50" text="ID" />
+            <TableColumn fx:id="nameColumn" prefWidth="200" text="Название" />
+            <TableColumn fx:id="quantityColumn" prefWidth="100" text="Количество" />
+            <TableColumn fx:id="tagColumn" prefWidth="150" text="Тег" />
         </columns>
     </TableView>
+
+    <GridPane hgap="10" vgap="10">
+        <Label text="Название:" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+        <TextField fx:id="nameField" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+
+        <Label text="Количество:" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+        <TextField fx:id="quantityField" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+
+        <Label text="Тег:" GridPane.columnIndex="0" GridPane.rowIndex="2" />
+        <ComboBox fx:id="tagComboBox" prefWidth="150" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+      <columnConstraints>
+         <ColumnConstraints />
+         <ColumnConstraints />
+      </columnConstraints>
+      <rowConstraints>
+         <RowConstraints />
+         <RowConstraints />
+         <RowConstraints />
+      </rowConstraints>
+    </GridPane>
+
     <HBox spacing="10">
-        <Button text="Add" onAction="#handleAddProduct">
+        <Button onAction="#handleAddProduct" text="Добавить">
             <tooltip>
                 <Tooltip text="Добавить новый продукт" />
             </tooltip>
         </Button>
-        <Button text="Update" onAction="#handleUpdateProduct">
+        <Button onAction="#handleUpdateProduct" text="Обновить">
             <tooltip>
                 <Tooltip text="Обновить выбранный продукт" />
             </tooltip>
         </Button>
-        <Button text="Delete" onAction="#handleDeleteProduct">
+        <Button onAction="#handleDeleteProduct" text="Удалить">
             <tooltip>
                 <Tooltip text="Удалить выбранный продукт" />
             </tooltip>

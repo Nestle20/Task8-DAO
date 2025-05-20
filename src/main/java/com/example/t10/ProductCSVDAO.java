@@ -3,39 +3,50 @@ package com.example.t10;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class ProductCSVDAO implements ProductDAO {
-    private final List<Product> products = new ArrayList<>();
+    private List<Product> products = new ArrayList<>();
     private final TagDAO tagDAO;
-    private int nextId = 1;
     private String currentFilePath;
+    private AtomicInteger idGenerator = new AtomicInteger(1);
 
     public ProductCSVDAO(TagDAO tagDAO) {
         this.tagDAO = tagDAO;
-        initializeSampleData();
+        // Попытка загрузить данные из файла по умолчанию
+        File defaultFile = new File("products.csv");
+        if (defaultFile.exists()) {
+            try {
+                importFromCSV(defaultFile.getAbsolutePath());
+                // Установка idGenerator на максимальный ID + 1
+                idGenerator.set(products.stream()
+                        .mapToInt(Product::getId)
+                        .max()
+                        .orElse(0) + 1);
+            } catch (Exception e) {
+                System.err.println("Ошибка загрузки данных по умолчанию: " + e.getMessage());
+                initializeSampleData();
+            }
+        } else {
+            initializeSampleData();
+        }
     }
 
     private void initializeSampleData() {
-        File file = new File("products.csv");
-        if (!file.exists()) {
-            List<Product> samples = List.of(
-                    new Product(1, "Наушники", 5, tagDAO.getAllTags().get(0)),
-                    new Product(2, "Клавиатура", 8, tagDAO.getAllTags().get(0)),
-                    new Product(3, "Джинсы", 12, tagDAO.getAllTags().get(1))
-            );
-            products.addAll(samples);
-            nextId = samples.size() + 1;
-            exportToCSV("products.csv");
-        } else {
-            importFromCSV("products.csv");
-        }
+        List<Tag> tags = tagDAO.getAllTags();
+        addProduct(new Product(idGenerator.getAndIncrement(), "Наушники", 10, tags.get(0)));
+        addProduct(new Product(idGenerator.getAndIncrement(), "Клавиатура", 5, tags.get(0)));
+        addProduct(new Product(idGenerator.getAndIncrement(), "Футболка", 20, tags.get(1)));
+        saveToCurrentFile();
     }
 
     @Override
     public void addProduct(Product product) {
-        product.setId(nextId++);
+        if (product.getId() == 0) {
+            product.setId(idGenerator.getAndIncrement());
+        }
         products.add(product);
-        if (currentFilePath != null) exportToCSV(currentFilePath);
+        saveToCurrentFile();
     }
 
     @Override
@@ -46,13 +57,13 @@ public class ProductCSVDAO implements ProductDAO {
                 break;
             }
         }
-        if (currentFilePath != null) exportToCSV(currentFilePath);
+        saveToCurrentFile();
     }
 
     @Override
     public void deleteProduct(int id) {
         products.removeIf(product -> product.getId() == id);
-        if (currentFilePath != null) exportToCSV(currentFilePath);
+        saveToCurrentFile();
     }
 
     @Override
@@ -73,26 +84,26 @@ public class ProductCSVDAO implements ProductDAO {
                 }
                 String[] values = line.split(";");
                 if (values.length >= 4) {
-                    int id = Integer.parseInt(values[0]);
-                    String name = values[1];
-                    int quantity = Integer.parseInt(values[2]);
-                    int tagId = Integer.parseInt(values[3]);
+                    int id = Integer.parseInt(values[0].trim());
+                    String name = values[1].trim();
+                    int quantity = Integer.parseInt(values[2].trim());
+                    int tagId = Integer.parseInt(values[3].trim());
 
                     Tag tag = tagDAO.getAllTags().stream()
                             .filter(t -> t.getId() == tagId)
                             .findFirst()
-                            .orElse(null);
+                            .orElse(tagDAO.getAllTags().get(0));
 
                     Product product = new Product(id, name, quantity, tag);
                     products.add(product);
-                    if (id >= nextId) {
-                        nextId = id + 1;
+                    if (id >= idGenerator.get()) {
+                        idGenerator.set(id + 1);
                     }
                 }
             }
             currentFilePath = filePath;
         } catch (IOException e) {
-            throw new RuntimeException("Error reading CSV file", e);
+            throw new RuntimeException("Ошибка чтения CSV файла", e);
         }
     }
 
@@ -109,17 +120,33 @@ public class ProductCSVDAO implements ProductDAO {
             }
             currentFilePath = filePath;
         } catch (IOException e) {
-            throw new RuntimeException("Error writing to CSV file", e);
+            throw new RuntimeException("Ошибка записи в CSV файл", e);
+        }
+    }
+
+    @Override
+    public String getCurrentFilePath() {
+        return currentFilePath;
+    }
+
+    private void saveToCurrentFile() {
+        if (currentFilePath != null) {
+            exportToCSV(currentFilePath);
         }
     }
 
     @Override
     public void switchToDatabaseSource() {
-        // Not applicable
+        throw new UnsupportedOperationException("Переключение на базу данных не поддерживается");
     }
 
     @Override
     public void switchToFileSource() {
-        // Already using file source
+        // Уже используем файловый источник
+    }
+
+    @Override
+    public void switchToInMemorySource() {
+        throw new UnsupportedOperationException("Переключение на in-memory не поддерживается");
     }
 }
