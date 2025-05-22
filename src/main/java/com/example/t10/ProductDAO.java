@@ -7,10 +7,7 @@ public interface ProductDAO {
     void updateProduct(Product product);
     void deleteProduct(int id);
     List<Product> getAllProducts();
-    void importFromCSV(String filePath);
-    void exportToCSV(String filePath);
-    void switchToDatabaseSource();
-    void switchToFileSource();
-    void switchToInMemorySource();
+    void importFromCSV(String filePath) throws Exception;
+    void exportToCSV(String filePath) throws Exception;
     String getCurrentFilePath();
 }
