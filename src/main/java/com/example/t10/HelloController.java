@@ -8,7 +8,6 @@ import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.stage.FileChooser;
 
 import java.io.File;
-import java.util.List;
 
 public class HelloController {
     @FXML private TableView<Product> productTable;
@@ -25,7 +24,7 @@ public class HelloController {
     @FXML private Button saveButton;
 
     private ProductDAO productDAO;
-    private final TagDAO tagDAO = new TagListImpl();
+    private final TagDAO tagDAO = new TagDAO.Impl();
     private final ObservableList<Product> products = FXCollections.observableArrayList();
     private final ObservableList<Tag> tags = FXCollections.observableArrayList(tagDAO.getAllTags());
 
@@ -35,7 +34,6 @@ public class HelloController {
         setupDataSourceComboBox();
         setupTagComboBox();
 
-        // Инициализация с CSV источником
         productDAO = new ProductCSVDAO(tagDAO);
         refreshData();
     }
@@ -47,18 +45,13 @@ public class HelloController {
         tagColumn.setCellValueFactory(new PropertyValueFactory<>("tag"));
 
         productTable.setItems(products);
-
-        productTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
-            if (newSelection != null) {
-                updateFormFields(newSelection);
+        productTable.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal != null) {
+                nameField.setText(newVal.getName());
+                quantityField.setText(String.valueOf(newVal.getQuantity()));
+                tagComboBox.getSelectionModel().select(newVal.getTag());
             }
         });
-    }
-
-    private void updateFormFields(Product product) {
-        nameField.setText(product.getName());
-        quantityField.setText(String.valueOf(product.getQuantity()));
-        tagComboBox.getSelectionModel().select(product.getTag());
     }
 
     private void setupDataSourceComboBox() {
@@ -75,7 +68,7 @@ public class HelloController {
     @FXML
     private void handleLoadFromFile() {
         FileChooser fileChooser = new FileChooser();
-        fileChooser.setTitle("Выберите CSV файл");
+        fileChooser.setTitle("Open CSV File");
         fileChooser.getExtensionFilters().add(
                 new FileChooser.ExtensionFilter("CSV Files", "*.csv")
         );
@@ -83,14 +76,11 @@ public class HelloController {
         File file = fileChooser.showOpenDialog(loadFromFileButton.getScene().getWindow());
         if (file != null) {
             try {
-                productDAO = new ProductCSVDAO(tagDAO);
                 ((ProductCSVDAO) productDAO).importFromCSV(file.getAbsolutePath());
                 refreshData();
-                showAlert("Успех", "Данные загружены",
-                        "Файл успешно загружен: " + file.getAbsolutePath());
+                showAlert("Success", "Data loaded", "File loaded: " + file.getAbsolutePath());
             } catch (Exception e) {
-                showAlert("Ошибка", "Ошибка загрузки",
-                        "Не удалось загрузить файл: " + e.getMessage());
+                showAlert("Error", "Load failed", "Error loading file: " + e.getMessage());
             }
         }
     }
@@ -99,13 +89,10 @@ public class HelloController {
     private void handleSaveToFile() {
         if (productDAO instanceof ProductCSVDAO) {
             try {
-                ((ProductCSVDAO) productDAO).exportToCSV(
-                        ((ProductCSVDAO) productDAO).getCurrentFilePath());
-                showAlert("Успех", "Сохранение",
-                        "Данные успешно сохранены в CSV файл");
+                ((ProductCSVDAO) productDAO).exportToCSV(((ProductCSVDAO) productDAO).getCurrentFilePath());
+                showAlert("Success", "Data saved", "Data saved to CSV file");
             } catch (Exception e) {
-                showAlert("Ошибка", "Ошибка сохранения",
-                        "Не удалось сохранить данные: " + e.getMessage());
+                showAlert("Error", "Save failed", "Error saving file: " + e.getMessage());
             }
         }
     }
@@ -113,12 +100,12 @@ public class HelloController {
     @FXML
     private void handleAddProduct() {
         try {
-            Product newProduct = createProductFromFields();
-            productDAO.addProduct(newProduct);
+            Product product = createProductFromFields();
+            productDAO.addProduct(product);
             refreshData();
             clearFields();
         } catch (Exception e) {
-            showAlert("Ошибка", "Некорректные данные", e.getMessage());
+            showAlert("Error", "Invalid data", e.getMessage());
         }
     }
 
@@ -126,19 +113,18 @@ public class HelloController {
     private void handleUpdateProduct() {
         Product selected = productTable.getSelectionModel().getSelectedItem();
         if (selected == null) {
-            showAlert("Ошибка", "Не выбран продукт",
-                    "Пожалуйста, выберите продукт для обновления");
+            showAlert("Error", "No selection", "Please select a product to update");
             return;
         }
 
         try {
-            Product updatedProduct = createProductFromFields();
-            updatedProduct.setId(selected.getId());
-            productDAO.updateProduct(updatedProduct);
+            Product product = createProductFromFields();
+            product.setId(selected.getId());
+            productDAO.updateProduct(product);
             refreshData();
             clearFields();
         } catch (Exception e) {
-            showAlert("Ошибка", "Некорректные данные", e.getMessage());
+            showAlert("Error", "Invalid data", e.getMessage());
         }
     }
 
@@ -146,8 +132,7 @@ public class HelloController {
     private void handleDeleteProduct() {
         Product selected = productTable.getSelectionModel().getSelectedItem();
         if (selected == null) {
-            showAlert("Ошибка", "Не выбран продукт",
-                    "Пожалуйста, выберите продукт для удаления");
+            showAlert("Error", "No selection", "Please select a product to delete");
             return;
         }
 
@@ -159,22 +144,22 @@ public class HelloController {
     private Product createProductFromFields() throws Exception {
         String name = nameField.getText().trim();
         if (name.isEmpty()) {
-            throw new Exception("Название продукта не может быть пустым");
+            throw new Exception("Product name cannot be empty");
         }
 
         int quantity;
         try {
             quantity = Integer.parseInt(quantityField.getText().trim());
         } catch (NumberFormatException e) {
-            throw new Exception("Количество должно быть числом");
+            throw new Exception("Quantity must be a number");
         }
 
-        Tag selectedTag = tagComboBox.getSelectionModel().getSelectedItem();
-        if (selectedTag == null) {
-            throw new Exception("Не выбран тег");
+        Tag tag = tagComboBox.getSelectionModel().getSelectedItem();
+        if (tag == null) {
+            throw new Exception("Please select a tag");
         }
 
-        return new Product(0, name, quantity, selectedTag);
+        return new Product(0, name, quantity, tag);
     }
 
     private void switchDataSource() {
@@ -184,18 +169,12 @@ public class HelloController {
             saveButton.setDisable(!selected.equals("CSV File"));
             refreshData();
         } catch (Exception e) {
-            showAlert("Ошибка", "Ошибка переключения",
-                    "Не удалось изменить источник данных: " + e.getMessage());
+            showAlert("Error", "Switch failed", "Error switching data source: " + e.getMessage());
         }
     }
 
     private void refreshData() {
-        try {
-            products.setAll(productDAO.getAllProducts());
-        } catch (Exception e) {
-            showAlert("Ошибка", "Ошибка данных",
-                    "Не удалось загрузить данные: " + e.getMessage());
-        }
+        products.setAll(productDAO.getAllProducts());
     }
 
     private void clearFields() {
