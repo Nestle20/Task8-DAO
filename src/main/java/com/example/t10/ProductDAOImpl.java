@@ -2,82 +2,52 @@ package com.example.t10;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 public class ProductDAOImpl implements ProductDAO {
-    private final List<Product> products;
-    private int nextId;
+    private final List<Product> products = new ArrayList<>();
+    private final TagDAO tagDAO;
 
     public ProductDAOImpl(TagDAO tagDAO) {
-        // Используем TagDAO
-        this.products = new ArrayList<>();
-        this.nextId = 1;
-
-        // Используем ProductList для начального заполнения данных
-        ProductList productList = new ProductList(5, tagDAO); // Создаем 5 тестовых продуктов
-        this.products.addAll(productList.getProducts());
-
-        // Устанавливаем nextId на основе последнего ID в списке
-        if (!products.isEmpty()) {
-            this.nextId = products.get(products.size() - 1).getId() + 1;
-        }
+        this.tagDAO = tagDAO;
     }
 
     @Override
     public void addProduct(Product product) {
-        product.setId(nextId++); // Устанавливаем ID и увеличиваем счетчик
         products.add(product);
     }
 
     @Override
     public void updateProduct(Product product) {
-        Optional<Product> existingProduct = products.stream()
-                .filter(p -> p.getId() == product.getId())
-                .findFirst();
-        existingProduct.ifPresent(p -> {
-            p.setName(product.getName());
-            p.setQuantity(product.getQuantity());
-            p.setTag(product.getTag());
-        });
+        for (int i = 0; i < products.size(); i++) {
+            if (products.get(i).getId() == product.getId()) {
+                products.set(i, product);
+                break;
+            }
+        }
     }
 
     @Override
     public void deleteProduct(int id) {
-        products.removeIf(product -> product.getId() == id);
+        products.removeIf(p -> p.getId() == id);
     }
 
     @Override
     public List<Product> getAllProducts() {
-        return new ArrayList<>(products); // Возвращаем копию списка
+        return new ArrayList<>(products);
     }
 
     @Override
-    public void importFromCSV(String filePath) {
-
+    public void importFromCSV(String filePath) throws Exception {
+        throw new UnsupportedOperationException("Not implemented");
     }
 
     @Override
-    public void exportToCSV(String filePath) {
-
-    }
-
-    @Override
-    public void switchToDatabaseSource() {
-
-    }
-
-    @Override
-    public void switchToFileSource() {
-
-    }
-
-    @Override
-    public void switchToInMemorySource() {
-
+    public void exportToCSV(String filePath) throws Exception {
+        throw new UnsupportedOperationException("Not implemented");
     }
 
     @Override
     public String getCurrentFilePath() {
-        return "";
+        return null;
     }
 }
