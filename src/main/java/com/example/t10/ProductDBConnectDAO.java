@@ -1,10 +1,7 @@
 package com.example.t10;
 
 import javax.sql.rowset.CachedRowSet;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -16,44 +13,10 @@ public class ProductDBConnectDAO implements ProductDAO {
         this.tagDAO = tagDAO;
         this.dbConnect = new DBConnect();
         try {
-            dbConnect.connect(false); // false для файловой БД
+            dbConnect.connect(false);
         } catch (SQLException e) {
-            throw new RuntimeException("Не удалось подключиться к базе данных", e);
+            throw new RuntimeException("Database connection failed", e);
         }
-    }
-
-    @Override
-    public List<Product> getAllProducts() {
-        List<Product> productList = new ArrayList<>();
-        try {
-            String sql = "SELECT id, name, quantity, tag_id FROM products";
-
-            try (CachedRowSet crs = dbConnect.executeQuery(sql)) {
-                while (crs.next()) {
-                    int tagId = crs.getInt("tag_id");
-                    Tag tag = findTagById(tagId);
-
-                    if (tag != null) {
-                        productList.add(new Product(
-                                crs.getInt("id"),
-                                crs.getString("name"),
-                                crs.getInt("quantity"),
-                                tag
-                        ));
-                    }
-                }
-            }
-        } catch (SQLException e) {
-            throw new RuntimeException("Ошибка при получении продуктов", e);
-        }
-        return productList;
-    }
-
-    private Tag findTagById(int tagId) {
-        return tagDAO.getAllTags().stream()
-                .filter(t -> t.getId() == tagId)
-                .findFirst()
-                .orElse(null);
     }
 
     @Override
@@ -71,7 +34,7 @@ public class ProductDBConnectDAO implements ProductDAO {
                 }
             }
         } catch (SQLException e) {
-            throw new RuntimeException("Ошибка при добавлении продукта", e);
+            e.printStackTrace();
         }
     }
 
@@ -85,7 +48,7 @@ public class ProductDBConnectDAO implements ProductDAO {
             pstmt.setInt(4, product.getId());
             pstmt.executeUpdate();
         } catch (SQLException e) {
-            throw new RuntimeException("Ошибка при обновлении продукта", e);
+            e.printStackTrace();
         }
     }
 
@@ -96,37 +59,50 @@ public class ProductDBConnectDAO implements ProductDAO {
             pstmt.setInt(1, id);
             pstmt.executeUpdate();
         } catch (SQLException e) {
-            throw new RuntimeException("Ошибка при удалении продукта", e);
+            e.printStackTrace();
         }
     }
 
     @Override
-    public void importFromCSV(String filePath) {
-        throw new UnsupportedOperationException("Импорт из CSV не поддерживается для базы данных");
+    public List<Product> getAllProducts() {
+        List<Product> products = new ArrayList<>();
+        String sql = "SELECT id, name, quantity, tag_id FROM products";
+
+        try (CachedRowSet crs = dbConnect.executeQuery(sql)) {
+            while (crs.next()) {
+                int tagId = crs.getInt("tag_id");
+                Tag tag = tagDAO.getAllTags().stream()
+                        .filter(t -> t.getId() == tagId)
+                        .findFirst()
+                        .orElse(null);
+
+                if (tag != null) {
+                    products.add(new Product(
+                            crs.getInt("id"),
+                            crs.getString("name"),
+                            crs.getInt("quantity"),
+                            tag
+                    ));
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return products;
     }
 
     @Override
-    public void exportToCSV(String filePath) {
-        throw new UnsupportedOperationException("Экспорт в CSV не поддерживается для базы данных");
+    public void importFromCSV(String filePath) throws Exception {
+        throw new UnsupportedOperationException("Import from CSV not supported for database");
+    }
+
+    @Override
+    public void exportToCSV(String filePath) throws Exception {
+        throw new UnsupportedOperationException("Export to CSV not supported for database");
     }
 
     @Override
     public String getCurrentFilePath() {
-        return null; // Для базы данных файл не используется
-    }
-
-    @Override
-    public void switchToDatabaseSource() {
-        // Уже используем базу данных
-    }
-
-    @Override
-    public void switchToFileSource() {
-        throw new UnsupportedOperationException("Переключение на файловый источник не поддерживается");
-    }
-
-    @Override
-    public void switchToInMemorySource() {
-        throw new UnsupportedOperationException("Переключение на In-Memory не поддерживается");
+        return null;
     }
 }
